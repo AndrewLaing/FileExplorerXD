@@ -1,29 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Web;
 using System.Windows.Forms;
 
 namespace FileExplorerXD
 {
-    /* DriveType Enum values used as Indexes for drive icons in imageList1
-     * -----------------------------------------------------------------------------------------
-     * Unknown          - 0 - The type of drive is unknown. 
-     * NoRootDirectory  - 1 - The drive does not have a root directory.
-     * Removable        - 2 - The drive is a removable storage device, such as a USB flash drive.
-     * Fixed            - 3 - The drive is a fixed disk.
-     * Network          - 4 - The drive is a network drive.
-     * CDRom            - 5 - The drive is an optical disc device, such as a CD or DVD-ROM.
-     * Ram              - 6 - The drive is a RAM disk.
-    */
-
-
     public partial class Form1 : Form
     {
         public Form1()
@@ -47,9 +28,7 @@ namespace FileExplorerXD
             string start_directory = Environment.ExpandEnvironmentVariables("%USERPROFILE%");
             start_directory = start_directory.Replace(@"\", "/");
             webBrowser1.Navigate(start_directory);
-            path_textBox.Text = start_directory;
         }
-
 
         #region "TreeView"
 
@@ -86,7 +65,12 @@ namespace FileExplorerXD
             if (tn.Nodes[0].Text == "..." && tn.Nodes[0].Tag == null)
             {
                 tn.Nodes.Clear();
-
+                if(!Directory.Exists(tn.Tag.ToString()))
+                {
+                    string message = "Can't find '" + tn.Tag.ToString() + "' check the path and try again";
+                    MessageBox.Show(message, "File Explorer", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
                 string[] subdirs = Directory.GetDirectories(tn.Tag.ToString());
 
                 foreach (string dir in subdirs)
@@ -111,9 +95,9 @@ namespace FileExplorerXD
                         node.ImageIndex = 7;          //display a locked folder icon
                         node.SelectedImageIndex = 7;
                     }
-                    catch (Exception ex)
+                    catch (Exception e)
                     {
-                        MessageBox.Show(ex.Message, "FileExplorerXD",
+                        MessageBox.Show(e.Message, "FileExplorerXD",
                             MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                     finally
@@ -204,9 +188,10 @@ namespace FileExplorerXD
             try
             {
                 dirsTreeView.SelectedNode = e.Node;
-                path_textBox.Text = dirsTreeView.SelectedNode.FullPath.ToString();
-                path_textBox.Text = path_textBox.Text.Replace(@"\\", @"\");
-                webBrowser1.Url = new Uri(path_textBox.Text);
+                string path = dirsTreeView.SelectedNode.FullPath.ToString();
+                path = path.Replace(@"\\", @"\");
+
+                webBrowser1.Url = new Uri(path);
             }
             catch (UnauthorizedAccessException)
             {
@@ -280,7 +265,6 @@ namespace FileExplorerXD
                     if (Directory.Exists(urlToNavigate))
                     {
                         webBrowser1.Url = new Uri(urlToNavigate);
-                        path_textBox.Text = urlToNavigate;
                     }
                     else
                     {
@@ -299,7 +283,7 @@ namespace FileExplorerXD
         {
             path_textBox.Text = DecodeUrl(webBrowser1.Url.AbsolutePath);
             updateTreeViewWithSelection();
-            updateItemCountStatusLabel();
+            updateItemCountStatusLabel(path_textBox.Text);
         }
 
         private string DecodeUrl(string url)
@@ -314,11 +298,8 @@ namespace FileExplorerXD
             return decoded_Url;
         }
 
-
-        private void updateItemCountStatusLabel()
+        private void updateItemCountStatusLabel(string path)
         {
-            string path = DecodeUrl(webBrowser1.Url.AbsolutePath);
-
             var directoryInfo = new System.IO.DirectoryInfo(path);
             try
             {
@@ -338,15 +319,12 @@ namespace FileExplorerXD
                 dirsTreeView.SelectedNode.ImageIndex = 7;    //display a locked folder icon
                 dirsTreeView.SelectedNode.SelectedImageIndex = 7;
             }
+            catch (Exception) 
+            {
+                itemCountStatusLabel.Text = "? items";
+            }
         }
 
-
         #endregion
-
-        // ///////////////////////////////////////////////////////////////////////////////
-        // //////////// IN PROGRESS //////////////////////////////////////////////////////
-        // ///////////////////////////////////////////////////////////////////////////////
-
-
     }
 }
